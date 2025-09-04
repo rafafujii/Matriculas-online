@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrícula - Escola Municipal Professor Julio Levino Rodrigues</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #f0f4f8, #e2e8f0);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <!-- Script do Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variáveis globais do ambiente (NÃO as modifique)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Inicializa o Firebase e o Firestore
+        let db;
+        let auth;
+        let isAuthReady = false;
+        let currentUserId = null;
+        window.db = db;
+        window.auth = auth;
+        window.isAuthReady = isAuthReady;
+        window.currentUserId = currentUserId;
+        window.collection = collection;
+        window.addDoc = addDoc;
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            const app = initializeApp(firebaseConfig);
+            window.db = getFirestore(app);
+            window.auth = getAuth(app);
+            setLogLevel('debug');
+
+            // Autentica o usuário
+            onAuthStateChanged(window.auth, async (user) => {
+                if (!user) {
+                    await (initialAuthToken ? signInWithCustomToken(window.auth, initialAuthToken) : signInAnonymously(window.auth));
+                }
+                window.currentUserId = window.auth.currentUser?.uid || crypto.randomUUID();
+                window.isAuthReady = true;
+                console.log("Usuário autenticado:", window.currentUserId);
+            });
+        }
+    </script>
+    <div class="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-xl border border-gray-200">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Matrícula Online</h1>
+            <p class="text-gray-600 font-semibold text-lg">Escola Municipal Professor Julio Levino Rodrigues</p>
+            <p class="text-sm text-gray-500 mt-2">Matrículas disponíveis do 1º ao 5º ano do Ensino Fundamental I.</p>
+            <p id="user-id-display" class="mt-2 text-xs text-gray-400 break-all"></p>
+        </div>
+
+        <form id="enrollment-form" class="space-y-6">
+
+            <!-- Seção de Dados do Aluno -->
+            <div class="space-y-4 p-6 bg-gray-50 rounded-lg">
+                <h2 class="text-xl font-bold text-gray-700">Dados do Aluno</h2>
+                <!-- Nome Completo do Aluno -->
+                <div>
+                    <label for="student-name" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo do Aluno</label>
+                    <input type="text" id="student-name" name="studentName" placeholder="Nome completo da criança" required
+                           class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                </div>
+                <!-- Data de Nascimento -->
+                <div>
+                    <label for="birth-date" class="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento</label>
+                    <input type="date" id="birth-date" name="birthDate" required
+                           class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                </div>
+                <!-- Série Desejada -->
+                <div>
+                    <label for="grade" class="block text-sm font-medium text-gray-700 mb-1">Série Desejada</label>
+                    <select id="grade" name="grade" required
+                            class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                        <option value="" disabled selected>Selecione a série</option>
+                        <option value="1">1º Ano</option>
+                        <option value="2">2º Ano</option>
+                        <option value="3">3º Ano</option>
+                        <option value="4">4º Ano</option>
+                        <option value="5">5º Ano</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Seção de Informações da Família e Residência -->
+            <div class="space-y-4 p-6 bg-gray-50 rounded-lg">
+                <h2 class="text-xl font-bold text-gray-700">Informações da Família e Residência</h2>
+                 <!-- Dados dos Responsáveis -->
+                <div class="space-y-4">
+                    <h3 class="font-semibold text-gray-600">Dados dos Responsáveis</h3>
+                     <!-- Nome Completo do Responsável 1 -->
+                    <div>
+                        <label for="guardian-name-1" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo do Responsável 1</label>
+                        <input type="text" id="guardian-name-1" name="guardianName1" placeholder="Nome completo do responsável 1" required
+                               class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                    </div>
+                    <!-- Telefone do Responsável 1 -->
+                    <div>
+                        <label for="phone-1" class="block text-sm font-medium text-gray-700 mb-1">Telefone do Responsável 1</label>
+                        <input type="tel" id="phone-1" name="phone1" placeholder="(99) 99999-9999" required
+                               class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                    </div>
+                     <!-- Nome Completo do Responsável 2 -->
+                    <div>
+                        <label for="guardian-name-2" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo do Responsável 2 (Opcional)</label>
+                        <input type="text" id="guardian-name-2" name="guardianName2" placeholder="Nome completo do responsável 2"
+                               class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                    </div>
+                    <!-- Telefone do Responsável 2 -->
+                    <div>
+                        <label for="phone-2" class="block text-sm font-medium text-gray-700 mb-1">Telefone do Responsável 2 (Opcional)</label>
+                        <input type="tel" id="phone-2" name="phone2" placeholder="(99) 99999-9999"
+                               class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                    </div>
+                </div>
+
+                <!-- Período de Aula -->
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Período de Aula Desejado</label>
+                    <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="aulaPeriodo" value="manha" class="form-radio text-blue-600 rounded-full" required>
+                            <span class="ml-2 text-gray-700">Manhã</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="aulaPeriodo" value="tarde" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Tarde</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Bolsa Família -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Participa do Programa Bolsa Família?</label>
+                    <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="bolsaFamilia" value="sim" class="form-radio text-blue-600 rounded-full" required>
+                            <span class="ml-2 text-gray-700">Sim</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="bolsaFamilia" value="nao" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Não</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Transporte Escolar -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Utiliza o transporte escolar municipal?</label>
+                    <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="transporteEscolar" value="sim" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Sim</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="transporteEscolar" value="nao" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Não</span>
+                        </label>
+                    </div>
+                     <div id="transporte-qual-div" class="hidden mt-2">
+                        <label for="transporte-qual" class="block text-sm font-medium text-gray-700 mb-1">Qual?</label>
+                        <input type="text" id="transporte-qual" name="transporteQual" placeholder="Qual tipo de transporte?"
+                               class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                    </div>
+                </div>
+
+                <!-- Cor/Raça -->
+                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor/raça do estudante</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="corRaca" value="amarela" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Amarela</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="corRaca" value="branca" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Branca</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="corRaca" value="parda" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Parda</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="corRaca" value="indigena" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Indígena</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="corRaca" value="preta" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Preta</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Tipo e Situação da Moradia -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Moradia</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="radio" name="tipoMoradia" value="casa" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Casa</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoMoradia" value="apartamento" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Apartamento</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoMoradia" value="comodo" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Cômodo</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoMoradia" value="coletiva" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Coletiva</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoMoradia" value="nao_declarar" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Não declarar</span></label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Situação da Moradia</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="radio" name="situacaoMoradia" value="propria" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Própria</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="situacaoMoradia" value="alugada" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Alugada</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="situacaoMoradia" value="cedida" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Cedida</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="situacaoMoradia" value="outra" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Outra</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="situacaoMoradia" value="nao_declarar" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Não declarar</span></label>
+                    </div>
+                </div>
+
+                <!-- Tipo de Construção -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de construção</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="radio" name="tipoConstrucao" value="alvenaria" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Alvenaria</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoConstrucao" value="madeira" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Madeira</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoConstrucao" value="mista" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Mista</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoConstrucao" value="outra" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Outra</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoConstrucao" value="nao_declarar" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Não declarar</span></label>
+                    </div>
+                </div>
+
+                <!-- Quem reside com o aluno -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Residem com o Aluno(a)</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="checkbox" name="residemComAluno" value="pai" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Pai</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="residemComAluno" value="mae" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Mãe</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="residemComAluno" value="irmaos" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Irmãos</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="residemComAluno" value="avos" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Avós</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="residemComAluno" value="tios" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Tios</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="residemComAluno" value="tutor" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Tutor legal</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="residemComAluno" value="conjuge" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Cônjuge</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="residemComAluno" value="outros" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Outros</span></label>
+                    </div>
+                </div>
+
+                <!-- Número de pessoas na residência -->
+                <div>
+                    <label for="num-pessoas" class="block text-sm font-medium text-gray-700 mb-1">Número de pessoas na residência (incluindo o aluno)</label>
+                    <input type="number" id="num-pessoas" name="numPessoas" placeholder="Número total" required
+                           class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                </div>
+            </div>
+
+            <!-- Seção de Infraestrutura e Renda -->
+            <div class="space-y-4 p-6 bg-gray-50 rounded-lg">
+                <h2 class="text-xl font-bold text-gray-700">Infraestrutura da Residência e Renda</h2>
+                <!-- Moradia possui -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">A moradia possui:</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="checkbox" name="moradiaPossui" value="agua" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Água encanada</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="moradiaPossui" value="energia" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Energia Elétrica</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="moradiaPossui" value="esgoto" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Rede de Esgoto</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="moradiaPossui" value="lixo" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Coleta de Lixo</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="moradiaPossui" value="fossa" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Fossa</span></label>
+                    </div>
+                </div>
+                <!-- Equipamentos disponíveis -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Equipamentos disponíveis na residência:</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="banheiro" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Banheiro</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="radio" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Rádio</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="televisao" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Televisão</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="geladeira" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Geladeira</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="computador" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Computador</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="celular" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Celular</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="tablet" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Tablet</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="freezer" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Freezer</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="maquina_lavar" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Máquina de Lavar</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="bicicleta" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Bicicleta</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="moto" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Moto</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="equipamentos" value="automovel" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Automóvel</span></label>
+                    </div>
+                </div>
+                <!-- Tipo de Internet -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Internet na Residência</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="radio" name="tipoInternet" value="nao_possui" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Não possui</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoInternet" value="via_radio" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Via Rádio</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoInternet" value="fibra" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Fibra</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoInternet" value="adsl" class="form-radio text-blue-600 rounded-full"><span class="ml-2">ADSL</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoInternet" value="movel_4g" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Móvel 4G</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="tipoInternet" value="via_satelite" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Via Satélite</span></label>
+                    </div>
+                </div>
+                <!-- Renda Familiar Mensal -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Renda Familiar Mensal</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center"><input type="radio" name="rendaFamiliar" value="sem_renda" class="form-radio text-blue-600 rounded-full" required><span class="ml-2">Sem renda</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="rendaFamiliar" value="ate_1_salario" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Até 01 salário mínimo</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="rendaFamiliar" value="de_1_a_3" class="form-radio text-blue-600 rounded-full"><span class="ml-2">De 01 a 03 salários mínimos</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="rendaFamiliar" value="de_3_a_5" class="form-radio text-blue-600 rounded-full"><span class="ml-2">De 03 a 05 salários mínimos</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="rendaFamiliar" value="mais_5" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Mais de 05 salários mínimos</span></label>
+                        <label class="inline-flex items-center"><input type="radio" name="rendaFamiliar" value="nao_declarar" class="form-radio text-blue-600 rounded-full"><span class="ml-2">Não declarar</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Histórico de Saúde -->
+            <div class="space-y-4 p-6 bg-gray-50 rounded-lg">
+                <h2 class="text-xl font-bold text-gray-700">Histórico de Saúde do(a) Estudante</h2>
+                 <!-- Plano de Saúde -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Possui convênio ou Plano de Saúde?</label>
+                    <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="planoSaude" value="sim" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Sim</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="planoSaude" value="nao" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Não</span>
+                        </label>
+                    </div>
+                </div>
+                 <!-- Medicamento Contínuo -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Faz uso de medicamento contínuo?</label>
+                    <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="medicamentoContinuo" value="sim" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Sim</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="medicamentoContinuo" value="nao" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Não</span>
+                        </label>
+                    </div>
+                     <div id="medicamento-qual-div" class="hidden mt-2">
+                        <label for="medicamento-qual" class="block text-sm font-medium text-gray-700 mb-1">Se sim, qual?</label>
+                        <input type="text" id="medicamento-qual" name="medicamentoQual" placeholder="Nome do medicamento e posologia"
+                               class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                    </div>
+                </div>
+                <!-- Vacinação -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">A vacinação do(a) estudante está "em dia"?</label>
+                    <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="vacinacaoDia" value="sim" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Sim</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="vacinacaoDia" value="nao" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Não</span>
+                        </label>
+                    </div>
+                </div>
+                 <!-- Alergias -->
+                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">O(a) estudante é alérgico(a)?</label>
+                    <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="alergia" value="sim" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Sim</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="alergia" value="nao" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Não</span>
+                        </label>
+                    </div>
+                     <div id="alergia-qual-div" class="hidden mt-2">
+                        <label for="alergia-qual" class="block text-sm font-medium text-gray-700 mb-1">Se sim, qual?</label>
+                        <input type="text" id="alergia-qual" name="alergiaQual" placeholder="Descrição da alergia"
+                               class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                    </div>
+                </div>
+                <!-- Doenças Crônicas -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Doenças Crônicas:</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-2 gap-x-4">
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="asma" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Asma/Bronquite</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="rinite" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Rinite alérgica</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="cardiopatia" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Cardiopatia</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="convulsao" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Convulsão/Doença neurológica</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="obesidade" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Obesidade</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="tireoide" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Doença da tireoide</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="epilepsia" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Epilepsia</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="hemofilia" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Hemofilia/Doenças do sangue</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="hipertensao" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Hipertensão Arterial</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="diabetes" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Diabetes</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="transtornos_psicologicos" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Transtornos psicológicos</span></label>
+                         <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="intolerancia_lactose" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Intolerância a Lactose</span></label>
+                          <label class="inline-flex items-center"><input type="checkbox" name="doencasCronicas" value="doenca_celiaca" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Doença Celíaca</span></label>
+                    </div>
+                </div>
+                 <!-- Outras Doenças -->
+                 <div>
+                     <label for="outras-doencas" class="block text-sm font-medium text-gray-700 mb-1">Outras Doenças (Quais?)</label>
+                    <input type="text" id="outras-doencas" name="outrasDoencas" placeholder="Outras doenças não listadas"
+                           class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                 </div>
+                 <!-- Deficiências -->
+                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Deficiências (obrigatório informar no requerimento de matrícula)</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-2 gap-x-4">
+                        <label class="inline-flex items-center"><input type="checkbox" name="deficiencias" value="visual" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Visual</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="deficiencias" value="auditiva" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Auditiva</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="deficiencias" value="fisica" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Física</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" name="deficiencias" value="outras" class="form-checkbox text-blue-600 rounded"><span class="ml-2">Outras</span></label>
+                    </div>
+                 </div>
+                 <!-- Restrições para Atividades Físicas -->
+                 <div>
+                     <label class="block text-sm font-medium text-gray-700 mb-1">O(a) estudante tem alguma restrição à prática de atividades físicas?</label>
+                     <div class="flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="restricaoAtividadesFisicas" value="sim" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Sim</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="restricaoAtividadesFisicas" value="nao" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Não</span>
+                        </label>
+                    </div>
+                 </div>
+                 <div id="restricao-qual-div" class="hidden mt-2">
+                        <label for="restricao-qual" class="block text-sm font-medium text-gray-700 mb-1">Se sim, qual?</label>
+                        <input type="text" id="restricao-qual" name="restricaoQual" placeholder="Descreva a restrição"
+                               class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors">
+                </div>
+            </div>
+            
+            <!-- Mensagem de Confirmação ou Erro -->
+            <div id="message-box" class="hidden text-center p-3 rounded-lg text-sm font-medium" role="alert"></div>
+
+            <!-- Botão de Envio -->
+            <div class="pt-4">
+                <button type="submit" id="submit-button"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    Enviar Matrícula
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('enrollment-form');
+            const messageBox = document.getElementById('message-box');
+            const submitButton = document.getElementById('submit-button');
+            const requiredInputs = form.querySelectorAll('[required]');
+            const userIdDisplay = document.getElementById('user-id-display');
+
+            // Exibe o ID do usuário após a autenticação
+            const authCheckInterval = setInterval(() => {
+                if (window.isAuthReady) {
+                    userIdDisplay.textContent = `ID do Usuário: ${window.currentUserId}`;
+                    clearInterval(authCheckInterval);
+                }
+            }, 100);
+
+            // Funções para mostrar/esconder campos adicionais
+            const setupConditionalFields = () => {
+                const transporteRadios = document.getElementsByName('transporteEscolar');
+                const transporteQualDiv = document.getElementById('transporte-qual-div');
+                transporteRadios.forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        if (e.target.value === 'sim') {
+                            transporteQualDiv.classList.remove('hidden');
+                        } else {
+                            transporteQualDiv.classList.add('hidden');
+                        }
+                    });
+                });
+
+                const medicamentoRadios = document.getElementsByName('medicamentoContinuo');
+                const medicamentoQualDiv = document.getElementById('medicamento-qual-div');
+                medicamentoRadios.forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        if (e.target.value === 'sim') {
+                            medicamentoQualDiv.classList.remove('hidden');
+                        } else {
+                            medicamentoQualDiv.classList.add('hidden');
+                        }
+                    });
+                });
+
+                const alergiaRadios = document.getElementsByName('alergia');
+                const alergiaQualDiv = document.getElementById('alergia-qual-div');
+                alergiaRadios.forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        if (e.target.value === 'sim') {
+                            alergiaQualDiv.classList.remove('hidden');
+                        } else {
+                            alergiaQualDiv.classList.add('hidden');
+                        }
+                    });
+                });
+
+                 const restricaoRadios = document.getElementsByName('restricaoAtividadesFisicas');
+                 const restricaoQualDiv = document.getElementById('restricao-qual-div');
+                 restricaoRadios.forEach(radio => {
+                     radio.addEventListener('change', (e) => {
+                         if (e.target.value === 'sim') {
+                             restricaoQualDiv.classList.remove('hidden');
+                         } else {
+                             restricaoQualDiv.classList.add('hidden');
+                         }
+                     });
+                 });
+            };
+
+            setupConditionalFields();
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                // Verifica se o Firebase está pronto
+                if (!window.isAuthReady) {
+                    messageBox.textContent = 'Aguarde, conectando ao sistema de matrícula...';
+                    messageBox.className = 'block text-center p-3 rounded-lg text-sm font-medium bg-yellow-100 text-yellow-700';
+                    return;
+                }
+                
+                let formIsValid = true;
+                requiredInputs.forEach(input => {
+                    if (!input.value.trim() && !input.classList.contains('optional')) {
+                        formIsValid = false;
+                    }
+                });
+
+                if (formIsValid) {
+                    // Exibe mensagem de carregamento e desabilita o botão
+                    messageBox.textContent = 'Enviando matrícula...';
+                    messageBox.className = 'block text-center p-3 rounded-lg text-sm font-medium bg-blue-100 text-blue-700';
+                    submitButton.disabled = true;
+
+                    // Função para coletar dados de checkboxes
+                    const getCheckboxValues = (name) => {
+                        const checkboxes = document.querySelectorAll(`input[name="${name}"]:checked`);
+                        return Array.from(checkboxes).map(cb => cb.value);
+                    };
+
+                    // Função para coletar dados de radio buttons
+                    const getRadioValue = (name) => {
+                        const radio = document.querySelector(`input[name="${name}"]:checked`);
+                        return radio ? radio.value : null;
+                    };
+
+                    // Coleta os dados do formulário
+                    const enrollmentData = {
+                        // Dados do Aluno
+                        studentName: document.getElementById('student-name').value,
+                        birthDate: document.getElementById('birth-date').value,
+                        grade: document.getElementById('grade').value,
+                        // Dados dos Responsáveis
+                        guardianName1: document.getElementById('guardian-name-1').value,
+                        phone1: document.getElementById('phone-1').value,
+                        guardianName2: document.getElementById('guardian-name-2').value,
+                        phone2: document.getElementById('phone-2').value,
+                        // Informações da Família e Residência
+                        aulaPeriodo: getRadioValue('aulaPeriodo'),
+                        bolsaFamilia: getRadioValue('bolsaFamilia'),
+                        transporteEscolar: getRadioValue('transporteEscolar'),
+                        transporteQual: document.getElementById('transporte-qual').value,
+                        corRaca: getRadioValue('corRaca'),
+                        tipoMoradia: getRadioValue('tipoMoradia'),
+                        situacaoMoradia: getRadioValue('situacaoMoradia'),
+                        tipoConstrucao: getRadioValue('tipoConstrucao'),
+                        residemComAluno: getCheckboxValues('residemComAluno'),
+                        numPessoas: document.getElementById('num-pessoas').value,
+                        // Infraestrutura e Renda
+                        moradiaPossui: getCheckboxValues('moradiaPossui'),
+                        equipamentos: getCheckboxValues('equipamentos'),
+                        tipoInternet: getRadioValue('tipoInternet'),
+                        rendaFamiliar: getRadioValue('rendaFamiliar'),
+                        // Histórico de Saúde
+                        planoSaude: getRadioValue('planoSaude'),
+                        medicamentoContinuo: getRadioValue('medicamentoContinuo'),
+                        medicamentoQual: document.getElementById('medicamento-qual').value,
+                        vacinacaoDia: getRadioValue('vacinacaoDia'),
+                        alergia: getRadioValue('alergia'),
+                        alergiaQual: document.getElementById('alergia-qual').value,
+                        doencasCronicas: getCheckboxValues('doencasCronicas'),
+                        outrasDoencas: document.getElementById('outras-doencas').value,
+                        deficiencias: getCheckboxValues('deficiencias'),
+                        restricaoAtividadesFisicas: getRadioValue('restricaoAtividadesFisicas'),
+                        restricaoQual: document.getElementById('restricao-qual').value,
+                        // Dados de registro
+                        timestamp: new Date()
+                    };
+
+                    try {
+                        // Salva os dados no Firestore
+                        const enrollmentsCollectionRef = window.collection(window.db, `artifacts/${window.appId}/public/data/enrollments`);
+                        await window.addDoc(enrollmentsCollectionRef, enrollmentData);
+                        
+                        // Exibe a mensagem de sucesso
+                        messageBox.textContent = 'Sua matrícula foi enviada com sucesso! A escola entrará em contato em breve.';
+                        messageBox.className = 'block text-center p-3 rounded-lg text-sm font-medium bg-green-100 text-green-700';
+                        
+                        // Limpa o formulário após o envio bem-sucedido
+                        form.reset();
+                        
+                    } catch (e) {
+                        console.error("Erro ao adicionar o documento: ", e);
+                        messageBox.textContent = 'Erro ao enviar a matrícula. Por favor, tente novamente.';
+                        messageBox.className = 'block text-center p-3 rounded-lg text-sm font-medium bg-red-100 text-red-700';
+                    } finally {
+                        submitButton.disabled = false;
+                        setTimeout(() => {
+                            messageBox.classList.add('hidden');
+                        }, 5000);
+                    }
+                } else {
+                    // Exibe mensagem de erro
+                    messageBox.textContent = 'Por favor, preencha todos os campos obrigatórios.';
+                    messageBox.className = 'block text-center p-3 rounded-lg text-sm font-medium bg-red-100 text-red-700';
+                    setTimeout(() => {
+                        messageBox.classList.add('hidden');
+                    }, 5000);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
